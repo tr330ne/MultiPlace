@@ -29,7 +29,7 @@ public class MultiPlaceCommand extends Command {
         return CommandUsage.builder()
                 .name("multiplace")
                 .category(CommandCategory.MODULE)
-                .description("Places or breaks blocks at set positions in a loop.")
+                .description("Places/Breaks blocks at set positions in a loop.")
                 .usageLines(
                         "on/off",
                         "add <x> <y> <z>",
