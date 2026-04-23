@@ -21,3 +21,5 @@ Places blocks at set positions in a loop. Supports: sneaking while placing and l
 ## Installation
 
 Drop the plugin jar into your ZenithProxy `plugins` folder and restart, or run this command: `plugins download https://github.com/tr330ne/MultiPlace/releases/download/23.04.26/MultiPlace-23.04.26.jar`
+
+***Questions: https://t.me/tr330ne***
