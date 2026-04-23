@@ -1,6 +1,7 @@
 # MultiPlace
 
-Places/Breaks blocks at set positions in a loop. Supports: sneaking while placing/breaking and limit container opening while active.
+Places/Breaks blocks at set positions in a loop.  
+Supports: sneaking while placing/breaking and limit container opening while active.
 
 <img width="800" height="412" alt="javaw_XvQKI4dp4b-ezgif com-video-to-gif-converter (1)" src="https://github.com/user-attachments/assets/3e670679-b8c4-4547-97e6-0a9a0ee80474" />
 
