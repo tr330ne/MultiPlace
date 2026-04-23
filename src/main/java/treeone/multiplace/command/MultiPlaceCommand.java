@@ -29,7 +29,7 @@ public class MultiPlaceCommand extends Command {
         return CommandUsage.builder()
                 .name("multiplace")
                 .category(CommandCategory.MODULE)
-                .description("Places blocks at set positions in a loop.")
+                .description("Places or breaks blocks at set positions in a loop.")
                 .usageLines(
                         "on/off",
                         "add <x> <y> <z>",
@@ -41,6 +41,7 @@ public class MultiPlaceCommand extends Command {
                         "item <item>",
                         "sneak on/off",
                         "limitcontainers on/off",
+                        "mode place/break",
                         "reset"
                 )
                 .aliases("mplace", "mp")
@@ -60,20 +61,22 @@ public class MultiPlaceCommand extends Command {
                                     .errorColor();
                             return ERROR;
                         }
-                        if (PLUGIN_CONFIG.session.itemName.isEmpty()) {
-                            c.getSource().getEmbed()
-                                    .title("MultiPlace " + toggleStrCaps(false))
-                                    .description("No item set.")
-                                    .errorColor();
-                            return ERROR;
-                        }
-                        ItemData itemData = ItemRegistry.REGISTRY.get(PLUGIN_CONFIG.session.itemName);
-                        if (itemData == null) {
-                            c.getSource().getEmbed()
-                                    .title("MultiPlace " + toggleStrCaps(false))
-                                    .description("Item not in registry.")
-                                    .errorColor();
-                            return ERROR;
+                        if (PLUGIN_CONFIG.session.mode == MultiPlaceConfig.Mode.PLACE) {
+                            if (PLUGIN_CONFIG.session.itemName.isEmpty()) {
+                                c.getSource().getEmbed()
+                                        .title("MultiPlace " + toggleStrCaps(false))
+                                        .description("No item set.")
+                                        .errorColor();
+                                return ERROR;
+                            }
+                            ItemData itemData = ItemRegistry.REGISTRY.get(PLUGIN_CONFIG.session.itemName);
+                            if (itemData == null) {
+                                c.getSource().getEmbed()
+                                        .title("MultiPlace " + toggleStrCaps(false))
+                                        .description("Item not in registry.")
+                                        .errorColor();
+                                return ERROR;
+                            }
                         }
                     }
                     PLUGIN_CONFIG.session.active = on;
@@ -227,6 +230,20 @@ public class MultiPlaceCommand extends Command {
                     return OK;
                 })))
 
+                .then(literal("mode")
+                        .then(literal("place").executes(c -> {
+                            PLUGIN_CONFIG.session.mode = MultiPlaceConfig.Mode.PLACE;
+                            MODULE.get(MultiPlaceModule.class).reset();
+                            c.getSource().getEmbed().title("Mode: Place");
+                            return OK;
+                        }))
+                        .then(literal("break").executes(c -> {
+                            PLUGIN_CONFIG.session.mode = MultiPlaceConfig.Mode.BREAK;
+                            MODULE.get(MultiPlaceModule.class).reset();
+                            c.getSource().getEmbed().title("Mode: Break");
+                            return OK;
+                        })))
+
                 .then(literal("clear").executes(c -> {
                     PLUGIN_CONFIG.session.positions.clear();
                     c.getSource().getEmbed()
@@ -241,6 +258,8 @@ public class MultiPlaceCommand extends Command {
                     PLUGIN_CONFIG.session.itemName = "";
                     PLUGIN_CONFIG.session.sneak = false;
                     PLUGIN_CONFIG.session.limitContainers = false;
+                    PLUGIN_CONFIG.session.mode = MultiPlaceConfig.Mode.PLACE;
+                    MODULE.get(MultiPlaceModule.class).reset();
                     c.getSource().getEmbed()
                             .title("MultiPlace Reset")
                             .successColor();
@@ -253,7 +272,11 @@ public class MultiPlaceCommand extends Command {
         String positions = formatPositions();
         ctx.getEmbed()
                 .addField("Active", toggleStr(PLUGIN_CONFIG.session.active))
-                .addField("Item", PLUGIN_CONFIG.session.itemName.isEmpty() ? "not set" : PLUGIN_CONFIG.session.itemName)
+                .addField("Mode", PLUGIN_CONFIG.session.mode.name().toLowerCase());
+        if (PLUGIN_CONFIG.session.mode == MultiPlaceConfig.Mode.PLACE) {
+            ctx.getEmbed().addField("Item", PLUGIN_CONFIG.session.itemName.isEmpty() ? "not set" : PLUGIN_CONFIG.session.itemName);
+        }
+        ctx.getEmbed()
                 .addField("Sneak", toggleStr(PLUGIN_CONFIG.session.sneak))
                 .addField("Limit Containers", toggleStr(PLUGIN_CONFIG.session.limitContainers))
                 .addField("Positions", positions.isEmpty() ? "none" : positions)

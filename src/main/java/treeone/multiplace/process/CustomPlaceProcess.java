@@ -31,7 +31,7 @@ import static treeone.multiplace.MultiPlacePlugin.PLUGIN_CONFIG;
 public class CustomPlaceProcess extends BaritoneProcessHelper {
 
     private @Nullable PathingRequestFuture future;
-    private @Nullable PlaceBlock target;
+    private @Nullable Object target;
     private int tries = 0;
 
     public CustomPlaceProcess(Baritone baritone) {
@@ -44,6 +44,12 @@ public class CustomPlaceProcess extends BaritoneProcessHelper {
         this.future = new PathingRequestFuture();
     }
 
+    public void breakBlock(int x, int y, int z) {
+        onLostControl();
+        this.target = new BreakBlock(x, y, z);
+        this.future = new PathingRequestFuture();
+    }
+
     @Override
     public boolean isActive() {
         return target != null;
@@ -51,14 +57,23 @@ public class CustomPlaceProcess extends BaritoneProcessHelper {
 
     @Override
     public PathingCommand onTick(boolean calcFailed, boolean isSafeToCancel, Goal currentGoal, PathingCommand prevCommand) {
-        PlaceBlock t = target;
+        Object t = target;
         if (t == null) {
             onLostControl();
             return null;
         }
-        PathingCommand cmd = t.pathingCommand();
+        PathingCommand cmd;
+        boolean succeeded;
+        if (t instanceof PlaceBlock pb) {
+            cmd = pb.pathingCommand();
+            succeeded = pb.isSucceeded();
+        } else {
+            BreakBlock bb = (BreakBlock) t;
+            cmd = bb.pathingCommand();
+            succeeded = bb.isSucceeded();
+        }
         if (cmd == null) {
-            if (t.isSucceeded() && future != null) {
+            if (succeeded && future != null) {
                 future.complete(true);
                 future.notifyListeners();
             }
@@ -198,19 +213,6 @@ public class CustomPlaceProcess extends BaritoneProcessHelper {
             return true;
         }
 
-        private static final double SNEAK_EYE_HEIGHT = 1.27;
-
-        private Vector2f sneakRotationTo(double targetX, double targetY, double targetZ) {
-            double eyeY = BOT.getY() + SNEAK_EYE_HEIGHT;
-            double dx = targetX - BOT.getX();
-            double dy = targetY - eyeY;
-            double dz = targetZ - BOT.getZ();
-            double dist = Math.sqrt(dx * dx + dz * dz);
-            double yaw = Math.toDegrees(Math.atan2(dz, dx)) - 90.0;
-            double pitch = -Math.toDegrees(Math.atan2(dy, dist));
-            return Vector2f.from((float) yaw, (float) pitch);
-        }
-
         public @Nullable Rotation rotationToPlaceTarget(PlaceTarget placeTarget) {
             int px = placeTarget.supportingBlockState().x();
             int py = placeTarget.supportingBlockState().y();
@@ -290,5 +292,152 @@ public class CustomPlaceProcess extends BaritoneProcessHelper {
         private void info(String msg, Object... args) {
             PATH_LOG.info(msg, args);
         }
+    }
+
+    @Data
+    public static class BreakBlock {
+        private final int x;
+        private final int y;
+        private final int z;
+        private boolean isBreaking = false;
+        private boolean succeeded = false;
+
+        public PathingCommand pathingCommand() {
+            if (succeeded || !targetValid()) return null;
+            isBreaking = BOT.getInteractions().isDestroying(x, y, z);
+            if (canInteract()) {
+                Hand hand = Hand.MAIN_HAND;
+                int toolSlot = bestTool(World.getBlock(x, y, z));
+                if (toolSlot >= 9) {
+                    if (toolSlot < 36) {
+                        INVENTORY.submit(InventoryActionRequest.builder()
+                                .owner(this)
+                                .actions(new MoveToHotbarSlot(toolSlot, MoveToHotbarAction.from(0)))
+                                .priority(Baritone.getPriority())
+                                .build());
+                    } else if (toolSlot <= 44) {
+                        INVENTORY.submit(InventoryActionRequest.builder()
+                                .owner(this)
+                                .actions(new SetHeldItem(toolSlot - 36))
+                                .priority(Baritone.getPriority())
+                                .build());
+                    } else if (toolSlot == 45) {
+                        hand = Hand.OFF_HAND;
+                    }
+                }
+                interact(hand);
+                return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
+            }
+            int rangeSq = Math.max(2, (int) Math.pow(BOT.getBlockReachDistance() - 1, 2));
+            return new PathingCommand(new GoalNear(x, y, z, rangeSq), PathingCommandType.REVALIDATE_GOAL_AND_PATH);
+        }
+
+        private int bestTool(Block block) {
+            int bestInd = -1;
+            double bestSpeed = -1;
+            var container = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
+            for (int i = container.getSize() - 1; i >= 0; i--) {
+                var itemStack = container.getItemStack(i);
+                if (itemStack == null) continue;
+                double speed = BOT.getInteractions().blockBreakSpeed(block, itemStack);
+                if (speed > bestSpeed) {
+                    bestSpeed = speed;
+                    bestInd = i;
+                }
+            }
+            return bestInd;
+        }
+
+        public boolean targetValid() {
+            if (World.isChunkLoadedBlockPos(x, z)) {
+                Block block = World.getBlock(x, y, z);
+                if (block.isAir()) {
+                    if (isBreaking) {
+                        succeeded = true;
+                        info("Block [{}, {}, {}] broken!", x, y, z);
+                        return false;
+                    }
+                    info("No block is at [{}, {}, {}], stopping", x, y, z);
+                    return false;
+                }
+                if (World.isFluid(block)) {
+                    info("A fluid {} is at [{}, {}, {}], stopping", block.name(), x, y, z);
+                    return false;
+                }
+                if (block.destroySpeed() < 0) {
+                    info("An unbreakable block {} is at [{}, {}, {}], stopping", block.name(), x, y, z);
+                    return false;
+                }
+                var cbs = BLOCK_DATA.getInteractionBoxesFromBlockStateId(World.getBlockStateId(x, y, z));
+                if (cbs.isEmpty()) {
+                    info("A block without interaction boxes is at target position, stopping");
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        public boolean canInteract() {
+            Position center = World.blockInteractionCenter(x, y, z);
+            boolean sneak = PLUGIN_CONFIG.session.sneak;
+            Vector2f rotation = sneak
+                    ? sneakRotationTo(center.x(), center.y(), center.z())
+                    : RotationHelper.rotationTo(center.x(), center.y(), center.z());
+            var result = RaycastHelper.playerEyeRaycastThroughToBlockTarget(x, y, z, rotation.getX(), rotation.getY());
+            return result.hit() && result.x() == x && result.y() == y && result.z() == z;
+        }
+
+        public void interact(Hand hand) {
+            Position center = World.blockInteractionCenter(x, y, z);
+            boolean sneak = PLUGIN_CONFIG.session.sneak;
+            Vector2f rot = sneak
+                    ? sneakRotationTo(center.x(), center.y(), center.z())
+                    : RotationHelper.rotationTo(center.x(), center.y(), center.z());
+            var in = Input.builder()
+                    .hand(hand)
+                    .clickRequiresRotation(true)
+                    .clickTarget(new ClickTarget.BlockPosition(x, y, z))
+                    .leftClick(true)
+                    .sneaking(sneak);
+            INPUTS.submit(
+                    InputRequest.builder()
+                            .owner(this)
+                            .input(in.build())
+                            .yaw(rot.getX())
+                            .pitch(rot.getY())
+                            .priority(Baritone.getPriority() + 1)
+                            .build()
+            ).addInputExecutedListener(f -> {
+                if (futureSucceeded(f)) {
+                    if (!isBreaking) {
+                        info("Started breaking block {} at [{}, {}, {}]", World.getBlock(x, y, z).name(), x, y, z);
+                    }
+                    isBreaking = true;
+                }
+            });
+        }
+
+        public boolean futureSucceeded(InputRequestFuture future) {
+            if (!future.getNow()) return false;
+            if (!(future.getClickResult() instanceof ClickResult.LeftClickResult r)) return false;
+            return r.getBlockX() == x && r.getBlockY() == y && r.getBlockZ() == z;
+        }
+
+        private void info(String msg, Object... args) {
+            PATH_LOG.info(msg, args);
+        }
+    }
+
+    private static final double SNEAK_EYE_HEIGHT = 1.27;
+
+    static Vector2f sneakRotationTo(double targetX, double targetY, double targetZ) {
+        double eyeY = BOT.getY() + SNEAK_EYE_HEIGHT;
+        double dx = targetX - BOT.getX();
+        double dy = targetY - eyeY;
+        double dz = targetZ - BOT.getZ();
+        double dist = Math.sqrt(dx * dx + dz * dz);
+        double yaw = Math.toDegrees(Math.atan2(dz, dx)) - 90.0;
+        double pitch = -Math.toDegrees(Math.atan2(dy, dist));
+        return Vector2f.from((float) yaw, (float) pitch);
     }
 }
