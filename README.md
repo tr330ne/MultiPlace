@@ -16,7 +16,7 @@ Places blocks at set positions in a loop. Supports: sneaking while placing and l
 * `mp sneak on/off`
 * `mp limitcontainers on/off`
 * `mp reset`
-* `mp stats`
+* `mp stats`/`mp s`
 
 ## Installation
 
