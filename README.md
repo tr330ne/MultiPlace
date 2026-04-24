@@ -9,6 +9,7 @@ Supports: sneaking while placing/breaking and limit container opening while acti
 (.multiplace/.mplace/.mp)
 * `mp on/off`
 * `mp mode place/break`
+* `mp pathing on/off`
 * `mp add <x> <y> <z>`
 * `mp addAt <index> <x> <y> <z>`
 * `mp addAll <x1> <y1> <z1>,,<x2> <y2> <z2>...`
@@ -22,7 +23,7 @@ Supports: sneaking while placing/breaking and limit container opening while acti
 
 ## Installation
 
-Drop the plugin jar into your ZenithProxy `plugins` folder and restart, or run this command: `plugins download https://github.com/tr330ne/MultiPlace/releases/download/24.04.26/MultiPlace-24.04.26.jar`
+Drop the plugin jar into your ZenithProxy `plugins` folder and restart, or run this command: `plugins download https://github.com/tr330ne/MultiPlace/releases/download/25.04.26/MultiPlace-25.04.26.jar`
 
 ***Questions:***
 * https://t.me/tr330ne  
