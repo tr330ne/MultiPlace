@@ -9,7 +9,7 @@ import net.kyori.adventure.text.logger.slf4j.ComponentLogger;
 
 @Plugin(
         id = "multiplace",
-        version = "24.04.26",
+        version = "25.04.26",
         description = "Places/Breaks blocks at set positions in a loop.",
         authors = {"TreeOne"},
         mcVersions = {"1.21.4"},

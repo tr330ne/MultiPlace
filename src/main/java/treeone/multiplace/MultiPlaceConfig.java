@@ -15,6 +15,7 @@ public class MultiPlaceConfig {
         public boolean sneak = false;
         public boolean limitContainers = false;
         public Mode mode = Mode.PLACE;
+        public boolean pathing = false;
     }
 
     public static class Pos {

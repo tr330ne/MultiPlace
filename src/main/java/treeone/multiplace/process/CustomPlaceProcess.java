@@ -195,6 +195,7 @@ public class CustomPlaceProcess extends BaritoneProcessHelper {
                 }
             }
             int rangeSq = Math.max(2, (int) Math.pow(BOT.getBlockReachDistance() - 1, 2));
+            if (!PLUGIN_CONFIG.session.pathing) return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
             return new PathingCommand(new GoalNear(x, y, z, rangeSq), PathingCommandType.REVALIDATE_GOAL_AND_PATH);
         }
 
@@ -329,6 +330,7 @@ public class CustomPlaceProcess extends BaritoneProcessHelper {
                 return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
             }
             int rangeSq = Math.max(2, (int) Math.pow(BOT.getBlockReachDistance() - 1, 2));
+            if (!PLUGIN_CONFIG.session.pathing) return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
             return new PathingCommand(new GoalNear(x, y, z, rangeSq), PathingCommandType.REVALIDATE_GOAL_AND_PATH);
         }
 

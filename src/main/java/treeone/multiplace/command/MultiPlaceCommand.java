@@ -41,6 +41,7 @@ public class MultiPlaceCommand extends Command {
                         "item <item>",
                         "sneak on/off",
                         "limitcontainers on/off",
+                        "pathing on/off",
                         "mode place/break",
                         "reset"
                 )
@@ -230,6 +231,13 @@ public class MultiPlaceCommand extends Command {
                     return OK;
                 })))
 
+                .then(literal("pathing").then(argument("toggle", toggle()).executes(c -> {
+                    PLUGIN_CONFIG.session.pathing = getToggle(c, "toggle");
+                    c.getSource().getEmbed()
+                            .title("Pathing " + toggleStrCaps(PLUGIN_CONFIG.session.pathing));
+                    return OK;
+                })))
+
                 .then(literal("mode")
                         .then(literal("place").executes(c -> {
                             PLUGIN_CONFIG.session.mode = MultiPlaceConfig.Mode.PLACE;
@@ -258,6 +266,7 @@ public class MultiPlaceCommand extends Command {
                     PLUGIN_CONFIG.session.itemName = "";
                     PLUGIN_CONFIG.session.sneak = false;
                     PLUGIN_CONFIG.session.limitContainers = false;
+                    PLUGIN_CONFIG.session.pathing = false;
                     PLUGIN_CONFIG.session.mode = MultiPlaceConfig.Mode.PLACE;
                     MODULE.get(MultiPlaceModule.class).reset();
                     c.getSource().getEmbed()
@@ -278,6 +287,7 @@ public class MultiPlaceCommand extends Command {
         }
         ctx.getEmbed()
                 .addField("Sneak", toggleStr(PLUGIN_CONFIG.session.sneak))
+                .addField("Pathing", toggleStr(PLUGIN_CONFIG.session.pathing))
                 .addField("Limit Containers", toggleStr(PLUGIN_CONFIG.session.limitContainers))
                 .addField("Positions", positions.isEmpty() ? "none" : positions)
                 .primaryColor();
