@@ -1,12 +1,12 @@
 # MultiPlace
 
 Places/Breaks blocks at set positions in a loop.  
-Supports: sneaking while placing/breaking and limit container opening while active.
+Supports: sneaking while placing/breaking and limit container opening/pathing while active.
 
 <img width="800" height="412" alt="javaw_XvQKI4dp4b-ezgif com-video-to-gif-converter (1)" src="https://github.com/user-attachments/assets/3e670679-b8c4-4547-97e6-0a9a0ee80474" />
 
 ## Commands
-(.multiplace/.mplace/.mp)
+(.multiplace/.mp)
 * `mp on/off`
 * `mp mode place/break`
 * `mp pathing on/off`
@@ -23,7 +23,7 @@ Supports: sneaking while placing/breaking and limit container opening while acti
 
 ## Installation
 
-Drop the plugin jar into your ZenithProxy `plugins` folder and restart, or run this command: `plugins download https://github.com/tr330ne/MultiPlace/releases/download/25.04.26/MultiPlace-25.04.26.jar`
+Drop the plugin jar into your ZenithProxy `plugins` folder and restart, or run this command: `plugins download https://github.com/tr330ne/MultiPlace/releases/download/25.04.26/MultiPlace-28.04.26.jar`
 
 ***Questions:***
 * https://t.me/tr330ne  
