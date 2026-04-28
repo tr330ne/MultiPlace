@@ -20,6 +20,7 @@ import com.zenith.mc.item.ItemData;
 import com.zenith.util.math.MathHelper;
 import lombok.Data;
 import org.cloudburstmc.math.vector.Vector2f;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.Pose;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.MoveToHotbarAction;
 import org.jspecify.annotations.Nullable;
@@ -113,6 +114,21 @@ public class CustomPlaceProcess extends BaritoneProcessHelper {
         private boolean succeeded = false;
 
         public void interact(Hand hand, PlaceTarget placeTarget, Rotation rotation) {
+            if (PLUGIN_CONFIG.session.sneak && !BOT.isSneaking()) {
+                INPUTS.submit(
+                        InputRequest.builder()
+                                .owner(this)
+                                .input(Input.builder()
+                                        .sneaking(true)
+                                        .build())
+                                .yaw(rotation.yaw())
+                                .pitch(rotation.pitch())
+                                .priority(Baritone.getPriority() + 1)
+                                .build()
+                );
+                return;
+            }
+
             var in = Input.builder()
                     .hand(hand)
                     .clickRequiresRotation(true)
@@ -146,10 +162,6 @@ public class CustomPlaceProcess extends BaritoneProcessHelper {
                     x, y, z
             );
             if (distToTarget <= BOT.getBlockReachDistance() + 8) {
-                if (CONFIG.client.extra.pathfinder.placeBlockVerifyAbleToPlace && entityInPlaceTarget()) {
-                    info("An entity is blocking the place position [{}, {}, {}], stopping", x, y, z);
-                    return null;
-                }
                 var placeTargets = findPlaceTargets();
                 if (placeTargets.isEmpty()) {
                     info("No valid blocks to place against, stopping");
@@ -219,11 +231,13 @@ public class CustomPlaceProcess extends BaritoneProcessHelper {
             int py = placeTarget.supportingBlockState().y();
             int pz = placeTarget.supportingBlockState().z();
             Position center = World.blockInteractionCenter(px, py, pz);
-            boolean sneak = PLUGIN_CONFIG.session.sneak;
-            Vector2f centerRot = sneak
-                    ? sneakRotationTo(center.x(), center.y(), center.z())
-                    : RotationHelper.rotationTo(center.x(), center.y(), center.z());
-            var centerResult = RaycastHelper.playerEyeRaycastThroughToBlockTarget(px, py, pz, centerRot.getX(), centerRot.getY());
+            double srcX = CACHE.getPlayerCache().getX();
+            double srcY = PLUGIN_CONFIG.session.sneak
+                    ? CACHE.getPlayerCache().getY() + BOT.getEntityDimensions(Pose.SNEAKING).getEyeHeight()
+                    : CACHE.getPlayerCache().getEyeY();
+            double srcZ = CACHE.getPlayerCache().getZ();
+            Vector2f centerRot = RotationHelper.rotationTo(center.x(), center.y(), center.z(), srcX, srcY, srcZ);
+            var centerResult = RaycastHelper.blockRaycastThroughToBlockTarget(px, py, pz, srcX, srcY, srcZ, centerRot.getX(), centerRot.getY(), BOT.getBlockReachDistance());
             if (centerResult.hit()
                     && centerResult.x() == px && centerResult.y() == py && centerResult.z() == pz
                     && centerResult.direction() == placeTarget.direction()) {
@@ -231,10 +245,8 @@ public class CustomPlaceProcess extends BaritoneProcessHelper {
             }
             double step = 0.1, maxStep = 0.5;
             for (var pos : rotationStepList(center.x(), center.y(), center.z(), step, maxStep)) {
-                Vector2f rot = sneak
-                        ? sneakRotationTo(pos.x(), pos.y(), pos.z())
-                        : RotationHelper.rotationTo(pos.x(), pos.y(), pos.z());
-                var res = RaycastHelper.playerEyeRaycastThroughToBlockTarget(px, py, pz, rot.getX(), rot.getY());
+                Vector2f rot = RotationHelper.rotationTo(pos.x(), pos.y(), pos.z(), srcX, srcY, srcZ);
+                var res = RaycastHelper.blockRaycastThroughToBlockTarget(px, py, pz, srcX, srcY, srcZ, rot.getX(), rot.getY(), BOT.getBlockReachDistance());
                 if (res.hit() && res.x() == px && res.y() == py && res.z() == pz && res.direction() == placeTarget.direction()) {
                     return new Rotation(rot.getX(), rot.getY());
                 }
@@ -258,13 +270,6 @@ public class CustomPlaceProcess extends BaritoneProcessHelper {
         }
 
         public record PlaceTarget(BlockState supportingBlockState, Direction direction) {}
-
-        public boolean entityInPlaceTarget() {
-            var entityCbs = new ArrayList<LocalizedCollisionBox>();
-            var blockCb = new LocalizedCollisionBox(new CollisionBox(0, 1, 0, 1, 0, 1), x, y, z);
-            World.getEntityCollisionBoxes(blockCb, entityCbs, entity -> entity.getEntityData().blocksBuilding());
-            return !entityCbs.isEmpty();
-        }
 
         static final Direction[] placeDirections = {
                 Direction.DOWN, Direction.SOUTH, Direction.EAST,
@@ -382,19 +387,25 @@ public class CustomPlaceProcess extends BaritoneProcessHelper {
         public boolean canInteract() {
             Position center = World.blockInteractionCenter(x, y, z);
             boolean sneak = PLUGIN_CONFIG.session.sneak;
-            Vector2f rotation = sneak
-                    ? sneakRotationTo(center.x(), center.y(), center.z())
-                    : RotationHelper.rotationTo(center.x(), center.y(), center.z());
-            var result = RaycastHelper.playerEyeRaycastThroughToBlockTarget(x, y, z, rotation.getX(), rotation.getY());
+            double srcX = CACHE.getPlayerCache().getX();
+            double srcY = sneak
+                    ? CACHE.getPlayerCache().getY() + BOT.getEntityDimensions(Pose.SNEAKING).getEyeHeight()
+                    : CACHE.getPlayerCache().getEyeY();
+            double srcZ = CACHE.getPlayerCache().getZ();
+            Vector2f rotation = RotationHelper.rotationTo(center.x(), center.y(), center.z(), srcX, srcY, srcZ);
+            var result = RaycastHelper.blockRaycastThroughToBlockTarget(x, y, z, srcX, srcY, srcZ, rotation.getX(), rotation.getY(), BOT.getBlockReachDistance());
             return result.hit() && result.x() == x && result.y() == y && result.z() == z;
         }
 
         public void interact(Hand hand) {
             Position center = World.blockInteractionCenter(x, y, z);
             boolean sneak = PLUGIN_CONFIG.session.sneak;
-            Vector2f rot = sneak
-                    ? sneakRotationTo(center.x(), center.y(), center.z())
-                    : RotationHelper.rotationTo(center.x(), center.y(), center.z());
+            double srcX = CACHE.getPlayerCache().getX();
+            double srcY = sneak
+                    ? CACHE.getPlayerCache().getY() + BOT.getEntityDimensions(Pose.SNEAKING).getEyeHeight()
+                    : CACHE.getPlayerCache().getEyeY();
+            double srcZ = CACHE.getPlayerCache().getZ();
+            Vector2f rot = RotationHelper.rotationTo(center.x(), center.y(), center.z(), srcX, srcY, srcZ);
             var in = Input.builder()
                     .hand(hand)
                     .clickRequiresRotation(true)
@@ -428,18 +439,5 @@ public class CustomPlaceProcess extends BaritoneProcessHelper {
         private void info(String msg, Object... args) {
             PATH_LOG.info(msg, args);
         }
-    }
-
-    private static final double SNEAK_EYE_HEIGHT = 1.27;
-
-    static Vector2f sneakRotationTo(double targetX, double targetY, double targetZ) {
-        double eyeY = BOT.getY() + SNEAK_EYE_HEIGHT;
-        double dx = targetX - BOT.getX();
-        double dy = targetY - eyeY;
-        double dz = targetZ - BOT.getZ();
-        double dist = Math.sqrt(dx * dx + dz * dz);
-        double yaw = Math.toDegrees(Math.atan2(dz, dx)) - 90.0;
-        double pitch = -Math.toDegrees(Math.atan2(dy, dist));
-        return Vector2f.from((float) yaw, (float) pitch);
     }
 }

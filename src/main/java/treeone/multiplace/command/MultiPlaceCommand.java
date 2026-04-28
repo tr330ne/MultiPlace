@@ -45,7 +45,7 @@ public class MultiPlaceCommand extends Command {
                         "mode place/break",
                         "reset"
                 )
-                .aliases("mplace", "mp")
+                .aliases("mp")
                 .build();
     }
 
