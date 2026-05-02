@@ -101,30 +101,34 @@ public class MultiPlaceModule extends Module {
         List<MultiPlaceConfig.Pos> positions = PLUGIN_CONFIG.session.positions;
         if (positions.isEmpty()) return;
 
-        if (PLUGIN_CONFIG.session.instant) {
-            if (PLUGIN_CONFIG.session.mode == MultiPlaceConfig.Mode.BREAK) {
-                tickInstantBreak(positions);
+        if (PLUGIN_CONFIG.session.mode == MultiPlaceConfig.Mode.PLACE) {
+            ItemData itemData = ItemRegistry.REGISTRY.get(PLUGIN_CONFIG.session.itemName);
+            if (itemData == null) {
+                LOG.warn("MultiPlace: unknown item '{}', stopping.", PLUGIN_CONFIG.session.itemName);
+                PLUGIN_CONFIG.session.active = false;
+                return;
+            }
+            int itemSlot = InventoryUtil.searchPlayerInventory(i -> i.getId() == itemData.id());
+            if (PLUGIN_CONFIG.session.instant) {
+                tickPlace(positions, itemData, itemSlot);
+                tickInstantPlace(positions, itemSlot);
             } else {
-                tickInstantPlace(positions);
+                tickPlace(positions, itemData, itemSlot);
             }
             return;
         }
 
-        if (PLUGIN_CONFIG.session.mode == MultiPlaceConfig.Mode.BREAK) {
+        if (PLUGIN_CONFIG.session.instant) {
             tickBreak(positions);
-        } else {
-            tickPlace(positions);
-        }
-    }
-
-    private void tickPlace(List<MultiPlaceConfig.Pos> positions) {
-        ItemData itemData = ItemRegistry.REGISTRY.get(PLUGIN_CONFIG.session.itemName);
-        if (itemData == null) {
-            LOG.warn("MultiPlace: unknown item '{}', stopping.", PLUGIN_CONFIG.session.itemName);
-            PLUGIN_CONFIG.session.active = false;
+            tickInstantBreak(positions);
             return;
         }
-        if (InventoryUtil.searchPlayerInventory(i -> i.getId() == itemData.id()) == -1) return;
+
+        tickBreak(positions);
+    }
+
+    private void tickPlace(List<MultiPlaceConfig.Pos> positions, ItemData itemData, int itemSlot) {
+        if (itemSlot == -1) return;
 
         while (placeProcesses.size() < positions.size()) {
             var process = new CustomPlaceProcess(BARITONE);
@@ -153,14 +157,7 @@ public class MultiPlaceModule extends Module {
         }
     }
 
-    private void tickInstantPlace(List<MultiPlaceConfig.Pos> positions) {
-        ItemData itemData = ItemRegistry.REGISTRY.get(PLUGIN_CONFIG.session.itemName);
-        if (itemData == null) {
-            LOG.warn("MultiPlace instant: unknown item '{}', stopping.", PLUGIN_CONFIG.session.itemName);
-            PLUGIN_CONFIG.session.active = false;
-            return;
-        }
-        int itemSlot = InventoryUtil.searchPlayerInventory(i -> i.getId() == itemData.id());
+    private void tickInstantPlace(List<MultiPlaceConfig.Pos> positions, int itemSlot) {
         if (itemSlot == -1) return;
         if (itemSlot >= 9 && itemSlot <= 35) {
             INVENTORY.submit(InventoryActionRequest.builder()
@@ -231,7 +228,6 @@ public class MultiPlaceModule extends Module {
             if (lastSentInstantBreaks.contains(bp)) continue;
             if (BOT.getInteractions().isDestroying(pos.x, pos.y, pos.z)) continue;
             if (botPos.distance(bp) > 5) continue;
-            if (bp.y() <= botPos.y() - 1) continue;
 
             var block = World.getBlock(pos.x, pos.y, pos.z);
             var container = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
