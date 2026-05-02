@@ -9,21 +9,23 @@ Supports: sneaking while placing/breaking and limit container opening/pathing wh
 (.multiplace/.mp)
 * `mp on/off`
 * `mp mode place/break`
+* `mp instant on/off`
+* `mp item <item>`
+* `mp sneak on/off`
 * `mp pathing on/off`
+* `mp limitcontainers on/off`
 * `mp add <x> <y> <z>`
 * `mp addAt <index> <x> <y> <z>`
 * `mp addAll <x1> <y1> <z1>,,<x2> <y2> <z2>...`
 * `mp del <index>`
 * `mp clear`
-* `mp item <item>`
-* `mp sneak on/off`
-* `mp limitcontainers on/off`
-* `mp reset`
 * `mp stats`/`mp s`
+* `mp disableOnDisconnect on/off`
+* `mp reset`
 
 ## Installation
 
-Drop the plugin jar into your ZenithProxy `plugins` folder and restart, or run this command: `plugins download https://github.com/tr330ne/MultiPlace/releases/download/28.04.26/MultiPlace-28.04.26.jar`
+Drop the plugin jar into your ZenithProxy `plugins` folder and restart, or run this command: `plugins download https://github.com/tr330ne/MultiPlace/releases/download/02.05.26/MultiPlace-02.05.26.jar`
 
 ***Questions:***
 * https://t.me/tr330ne  
