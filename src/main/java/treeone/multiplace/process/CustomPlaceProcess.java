@@ -339,7 +339,7 @@ public class CustomPlaceProcess extends BaritoneProcessHelper {
             return new PathingCommand(new GoalNear(x, y, z, rangeSq), PathingCommandType.REVALIDATE_GOAL_AND_PATH);
         }
 
-        private int bestTool(Block block) {
+        public static int bestTool(Block block) {
             int bestInd = -1;
             double bestSpeed = -1;
             var container = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();

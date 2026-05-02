@@ -32,17 +32,19 @@ public class MultiPlaceCommand extends Command {
                 .description("Places/Breaks blocks at set positions in a loop.")
                 .usageLines(
                         "on/off",
+                        "mode place/break",
+                        "instant on/off",
+                        "item <item>",
+                        "sneak on/off",
+                        "pathing on/off",
+                        "limitcontainers on/off",
                         "add <x> <y> <z>",
                         "addAt <index> <x> <y> <z>",
                         "addAll <x1> <y1> <z1>,,<x2> <y2> <z2>...",
                         "del <index>",
                         "clear",
                         "stats",
-                        "item <item>",
-                        "sneak on/off",
-                        "limitcontainers on/off",
-                        "pathing on/off",
-                        "mode place/break",
+                        "disableOnDisconnect on/off",
                         "reset"
                 )
                 .aliases("mp")
@@ -231,6 +233,21 @@ public class MultiPlaceCommand extends Command {
                     return OK;
                 })))
 
+                .then(literal("disableOnDisconnect").then(argument("toggle", toggle()).executes(c -> {
+                    PLUGIN_CONFIG.session.disableOnDisconnect = getToggle(c, "toggle");
+                    c.getSource().getEmbed()
+                            .title("Disable On Disconnect " + toggleStrCaps(PLUGIN_CONFIG.session.disableOnDisconnect));
+                    return OK;
+                })))
+
+                .then(literal("instant").then(argument("toggle", toggle()).executes(c -> {
+                    PLUGIN_CONFIG.session.instant = getToggle(c, "toggle");
+                    if (PLUGIN_CONFIG.session.instant) MODULE.get(MultiPlaceModule.class).reset();
+                    c.getSource().getEmbed()
+                            .title("Instant " + toggleStrCaps(PLUGIN_CONFIG.session.instant));
+                    return OK;
+                })))
+
                 .then(literal("pathing").then(argument("toggle", toggle()).executes(c -> {
                     PLUGIN_CONFIG.session.pathing = getToggle(c, "toggle");
                     c.getSource().getEmbed()
@@ -266,7 +283,9 @@ public class MultiPlaceCommand extends Command {
                     PLUGIN_CONFIG.session.itemName = "";
                     PLUGIN_CONFIG.session.sneak = false;
                     PLUGIN_CONFIG.session.limitContainers = false;
+                    PLUGIN_CONFIG.session.instant = false;
                     PLUGIN_CONFIG.session.pathing = false;
+                    PLUGIN_CONFIG.session.disableOnDisconnect = false;
                     PLUGIN_CONFIG.session.mode = MultiPlaceConfig.Mode.PLACE;
                     MODULE.get(MultiPlaceModule.class).reset();
                     c.getSource().getEmbed()
@@ -281,7 +300,8 @@ public class MultiPlaceCommand extends Command {
         String positions = formatPositions();
         ctx.getEmbed()
                 .addField("Active", toggleStr(PLUGIN_CONFIG.session.active))
-                .addField("Mode", PLUGIN_CONFIG.session.mode.name().toLowerCase());
+                .addField("Mode", PLUGIN_CONFIG.session.mode.name().toLowerCase())
+                .addField("Instant", toggleStr(PLUGIN_CONFIG.session.instant));
         if (PLUGIN_CONFIG.session.mode == MultiPlaceConfig.Mode.PLACE) {
             ctx.getEmbed().addField("Item", PLUGIN_CONFIG.session.itemName.isEmpty() ? "not set" : PLUGIN_CONFIG.session.itemName);
         }
@@ -290,6 +310,7 @@ public class MultiPlaceCommand extends Command {
                 .addField("Pathing", toggleStr(PLUGIN_CONFIG.session.pathing))
                 .addField("Limit Containers", toggleStr(PLUGIN_CONFIG.session.limitContainers))
                 .addField("Positions", positions.isEmpty() ? "none" : positions)
+                .addField("Disable On Disconnect", toggleStr(PLUGIN_CONFIG.session.disableOnDisconnect))
                 .primaryColor();
     }
 

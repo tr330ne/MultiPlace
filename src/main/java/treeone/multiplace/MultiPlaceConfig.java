@@ -16,6 +16,8 @@ public class MultiPlaceConfig {
         public boolean limitContainers = false;
         public Mode mode = Mode.PLACE;
         public boolean pathing = false;
+        public boolean instant = false;
+        public boolean disableOnDisconnect = false;
     }
 
     public static class Pos {
