@@ -25,7 +25,7 @@ Supports: sneaking while placing/breaking and limit container opening/pathing wh
 
 ## Installation
 
-Drop the plugin jar into your ZenithProxy `plugins` folder and restart, or run this command: `plugins download https://github.com/tr330ne/MultiPlace/releases/download/02.05.26/MultiPlace-02.05.26.jar`
+Drop the plugin jar into your ZenithProxy `plugins` folder and restart, or run this command: `plugins download https://github.com/tr330ne/MultiPlace/releases/download/03.05.26/MultiPlace-03.05.26.jar`
 
 ***Questions:***
 * https://t.me/tr330ne  
